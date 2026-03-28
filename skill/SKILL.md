@@ -13,7 +13,7 @@ import { NexsendoClient } from "@nexsendo/sdk";
 
 const nexsendo = new NexsendoClient({
   apiKey: process.env.NEXSENDO_API_KEY!,
-  baseUrl: "https://messaging-api.lamaroliphant.com", // optional, this is the default
+  baseUrl: "https://api.nexsendo.com", // optional, this is the default
 });
 ```
 

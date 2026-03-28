@@ -37,7 +37,7 @@ import type {
   SetWebhookParams,
 } from "./types.js";
 
-const DEFAULT_BASE_URL = "https://messaging-api.lamaroliphant.com";
+const DEFAULT_BASE_URL = "https://api.nexsendo.com";
 
 export class NexsendoClient {
   private readonly apiKey: string;
