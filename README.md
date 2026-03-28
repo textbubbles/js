@@ -31,6 +31,42 @@ await nexsendo.messages.send({
 });
 ```
 
+## AI Agent Skill
+
+This SDK includes an **Agent Skill** for AI coding assistants like Claude Code and Cursor. The skill makes AI assistants experts at using this SDK.
+
+### Claude Code
+
+Add to your project's `AGENTS.md` or run:
+
+```bash
+# Copy the skill to your project
+cp -r node_modules/@nexsendo/sdk/skill ./nexsendo-skill
+
+# Or reference it in AGENTS.md
+echo "Skill: node_modules/@nexsendo/sdk/skill/SKILL.md" >> AGENTS.md
+```
+
+### Cursor
+
+Add to `.cursor/rules`:
+
+```
+Read and follow the Nexsendo SDK skill at: node_modules/@nexsendo/sdk/skill/SKILL.md
+```
+
+Or copy `skill/SKILL.md` content into your `.cursorrules` file.
+
+### What the Skill Provides
+
+- Complete API reference for all SDK methods
+- Parameter types and return values
+- Code examples for common use cases
+- Webhook event handling patterns
+- Next.js integration examples
+
+---
+
 ## Messages
 
 ```typescript
@@ -147,10 +183,14 @@ await nexsendo.contacts.bulkCreate({
 await nexsendo.contacts.bulkDelete({ ids: ["id1", "id2"] });
 ```
 
-## Payments (Apple Cash)
+## Payment Requests (Apple Cash)
+
+Request payments via iMessage. This sends a formatted message with payment details — **the recipient must manually send payment via Apple Cash**.
+
+> **Note:** These are payment _requests_, not actual Apple Pay transactions. We detect when payments are received by pattern-matching incoming iMessages.
 
 ```typescript
-// Request a payment
+// Request a payment (sends formatted iMessage)
 const payment = await nexsendo.payments.request({
   to: "+14155551234",
   amount: 25.0,
@@ -164,9 +204,16 @@ const payments = await nexsendo.payments.list();
 // Get a specific request
 const req = await nexsendo.payments.get("pay_abc123");
 
-// Cancel a request
+// Cancel a pending request (marks as cancelled, fires webhook)
 await nexsendo.payments.cancel("pay_abc123");
 ```
+
+### How Payment Detection Works
+
+1. You call `payments.request()` → We send a formatted iMessage asking for payment
+2. Recipient manually sends money via Apple Cash
+3. We detect the incoming "sent you $X" message and match it to your request
+4. Status updates to `paid` and `payment.request.paid` webhook fires
 
 ## Profile (Name & Photo Sharing)
 
@@ -281,11 +328,11 @@ export default createWebhookHandler({
 | `reaction.removed` | Reaction removed from message |
 | `typing.started` | User started typing |
 | `typing.stopped` | User stopped typing |
-| `payment.request.created` | Payment request created |
-| `payment.request.paid` | Payment request was paid |
+| `payment.request.created` | Payment request sent |
+| `payment.request.paid` | Payment detected from recipient |
 | `payment.request.cancelled` | Payment request cancelled |
-| `payment.request.expired` | Payment request expired |
-| `facetime.incoming` | Incoming FaceTime call |
+| `payment.request.expired` | Payment request expired (30 days) |
+| `facetime.incoming` | Incoming FaceTime call detected |
 | `facetime.status_changed` | FaceTime call status changed |
 
 ## Error Handling
