@@ -167,6 +167,60 @@ await tb.chats.sendTyping(group.guid);
 await tb.messages.send({ to: group.guid, content: { text: "Welcome everyone!" } });
 ```
 
+## CLI
+
+The SDK includes a `textbubbles` CLI. Install globally with `npm i -g @textbubbles/js` or run via `npx @textbubbles/js`.
+
+### Auth
+```bash
+textbubbles login              # Save API key to ~/.textbubbles/config.json
+textbubbles logout             # Remove saved credentials
+textbubbles whoami             # Show current auth status
+```
+
+### Messages
+```bash
+textbubbles send <to> <message> [--effect confetti] [--media url]
+textbubbles send:carousel <to> <url1> <url2> [url3...]
+textbubbles send:schedule <to> <message> --at "2026-03-29T09:00:00Z"
+textbubbles messages list [--to +1...] [--limit 20]
+textbubbles messages get <id>
+textbubbles messages cancel <id>
+```
+
+### Contacts
+```bash
+textbubbles contacts list [--tag vip] [--search jane]
+textbubbles contacts create --phone +1... --name "Jane Doe"
+textbubbles contacts get <id>
+textbubbles contacts delete <id>
+```
+
+### Capabilities
+```bash
+textbubbles check <phone>      # Check if phone supports iMessage
+```
+
+### Webhooks
+```bash
+textbubbles webhooks get
+textbubbles webhooks set <url> [--events message.received,message.delivered] [--secret s]
+```
+
+### Payments
+```bash
+textbubbles pay:request <to> <amount> [--memo "For lunch"] [--currency USD]
+textbubbles pay:list
+textbubbles pay:cancel <id>
+```
+
+### Global Options
+- `--json` — Output raw JSON instead of formatted tables
+- `--help` — Show help for any command
+
+### Config
+Credentials are stored in `~/.textbubbles/config.json`. The `TEXTBUBBLES_API_KEY` env var takes precedence over the config file.
+
 ## Source Files
 
 - `src/index.ts` — Main exports
@@ -175,3 +229,4 @@ await tb.messages.send({ to: group.guid, content: { text: "Welcome everyone!" } 
 - `src/errors.ts` — Error classes
 - `src/webhooks.ts` — Webhook verification, parsing, type guards
 - `src/nextjs.ts` — Next.js webhook handler helper
+- `src/cli.ts` — CLI entry point (commander-based)
