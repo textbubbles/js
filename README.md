@@ -1,6 +1,6 @@
 # @textbubbles/js
 
-TypeScript SDK for the TextBubbles messaging API. Supports iMessage, group chats, contacts, payments, webhooks, and more.
+TypeScript SDK for the TextBubbles messaging API. Supports iMessage, group chats, contacts, payments, webhooks, real-time events, and more.
 
 ## Install
 
@@ -63,6 +63,7 @@ Or copy `skill/SKILL.md` content into your `.cursorrules` file.
 - Parameter types and return values
 - Code examples for common use cases
 - Webhook event handling patterns
+- Real-time events examples
 - Next.js integration examples
 
 ---
@@ -81,16 +82,27 @@ await tb.messages.send({
   metadata: { orderId: "123" },
 });
 
-// List messages
-const messages = await tb.messages.list({
+// List messages (supports cursor-based pagination)
+const page1 = await tb.messages.list({
   to: "+14155551234",
   status: "delivered",
   limit: 20,
-  offset: 0,
 });
+
+// Paginate with cursor
+if (page1.hasMore && page1.cursor) {
+  const page2 = await tb.messages.list({ limit: 20, cursor: page1.cursor });
+}
 
 // Get a message
 const msg = await tb.messages.get("msg_abc123");
+
+// Check message channel and direction
+import { isIncomingMessage } from "@textbubbles/js";
+console.log(msg.channel); // "imessage" | "sms" | null
+if (isIncomingMessage(msg)) {
+  console.log("Received from:", msg.from);
+}
 
 // Send image carousel (2-20 images)
 await tb.messages.sendCarousel({
@@ -109,6 +121,13 @@ await tb.messages.cancelSchedule("msg_abc123");
 
 // Delete a message
 await tb.messages.delete("msg_abc123");
+
+// Unsend a message
+await tb.messages.unsend("msg_abc123");
+
+// Get delivery status
+const status = await tb.messages.getStatus("msg_abc123");
+console.log(status.status); // "delivered"
 
 // React to a message
 await tb.messages.react("msg_abc123", { reaction: "love" });
@@ -248,21 +267,30 @@ console.log(result.iMessage); // true or false
 // Get current webhook config
 const config = await tb.webhooks.get();
 
-// Set webhook config
+// Set webhook config — subscribe to specific events
 await tb.webhooks.set({
   url: "https://example.com/webhooks/textbubbles",
   secret: "whsec_your_secret",
   events: ["message.received", "message.delivered"],
 });
+
+// Subscribe to ALL events with wildcard
+await tb.webhooks.set({
+  url: "https://example.com/webhooks/textbubbles",
+  secret: "whsec_your_secret",
+  events: ["*"],
+});
 ```
 
 ### Handling Webhooks
 
+The API sends webhooks with an `X-Signature` header (`sha256=<hex>` format) and an `X-Timestamp` header. The signature is HMAC-SHA256 of `${timestamp}.${body}`.
+
 ```typescript
 import { verifyWebhookSignature, parseWebhookEvent, isMessageEvent } from "@textbubbles/js/webhooks";
 
-// Verify signature
-const isValid = await verifyWebhookSignature(rawBody, signature, secret);
+// Verify signature (pass timestamp from X-Timestamp header)
+const isValid = await verifyWebhookSignature(rawBody, signature, secret, timestamp);
 
 // Parse and handle events
 const event = parseWebhookEvent(rawBody);
@@ -270,6 +298,30 @@ const event = parseWebhookEvent(rawBody);
 if (isMessageEvent(event)) {
   console.log("Message:", event.data.content.text);
 }
+```
+
+### WebhookHandler Class
+
+For server frameworks without a dedicated integration:
+
+```typescript
+import { WebhookHandler } from "@textbubbles/js/webhooks";
+
+const handler = new WebhookHandler({
+  secret: process.env.WEBHOOK_SECRET!,
+  onError: (err) => console.error(err),
+});
+
+handler
+  .on("message.received", (event) => {
+    console.log("New message from:", event.data.from);
+  })
+  .on("message.delivered", (event) => {
+    console.log("Delivered:", event.data.id);
+  });
+
+// In your route handler:
+const { ok, error } = await handler.handleRequest(body, signature, timestamp);
 ```
 
 ### Next.js Integration
@@ -313,6 +365,55 @@ export default createWebhookHandler({
 });
 ```
 
+## Real-Time Events (SSE)
+
+Receive events in real-time using Server-Sent Events:
+
+```typescript
+import { TextBubblesEventClient } from "@textbubbles/js/events";
+
+const events = new TextBubblesEventClient({
+  url: "https://api.textbubbles.com/v1/events",
+  headers: { Authorization: `Bearer ${apiKey}` },
+});
+
+// Listen for specific events
+events.on("message.received", (event) => {
+  console.log("New message:", event.data);
+});
+
+// Listen for all events
+events.on("*", (event) => {
+  console.log("Event:", event.type);
+});
+
+// Connect (auto-reconnects with exponential backoff)
+events.connect();
+
+// Check connection status
+console.log(events.isConnected);
+
+// Disconnect when done
+events.disconnect();
+```
+
+## Message Direction Helpers
+
+```typescript
+import { isOutgoingMessage, isIncomingMessage } from "@textbubbles/js";
+
+const msg = await tb.messages.get("msg_abc123");
+
+if (isIncomingMessage(msg)) {
+  // msg.status === "received"
+  console.log("From:", msg.from, "via", msg.channel);
+}
+
+if (isOutgoingMessage(msg)) {
+  console.log("Sent to:", msg.to, "status:", msg.status);
+}
+```
+
 ## Webhook Event Types
 
 | Event | Description |
@@ -324,10 +425,12 @@ export default createWebhookHandler({
 | `message.received` | New message received |
 | `message.scheduled` | Message was scheduled |
 | `message.schedule_cancelled` | Scheduled message cancelled |
+| `message.reaction` | Reaction on a message (via message context) |
 | `reaction.added` | Reaction added to message |
 | `reaction.removed` | Reaction removed from message |
 | `typing.started` | User started typing |
 | `typing.stopped` | User stopped typing |
+| `typing.indicator` | Typing indicator received |
 | `payment.request.created` | Payment request sent |
 | `payment.request.paid` | Payment detected from recipient |
 | `payment.request.cancelled` | Payment request cancelled |
@@ -368,7 +471,13 @@ try {
 All request params and response types are exported:
 
 ```typescript
-import type { Message, SendMessageParams, WebhookEvent } from "@textbubbles/js";
+import type {
+  Message,
+  MessageChannel,
+  SendMessageParams,
+  WebhookEvent,
+  WebhookEventType,
+} from "@textbubbles/js";
 ```
 
 ## Requirements

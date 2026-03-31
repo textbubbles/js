@@ -56,10 +56,11 @@ async function handleAppRouter(
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
   }
 
-  const signature = req.headers.get("x-textbubbles-signature") ?? "";
+  const signature = req.headers.get("x-signature") ?? req.headers.get("x-textbubbles-signature") ?? "";
+  const timestamp = req.headers.get("x-timestamp") ?? undefined;
   const body = await req.text();
 
-  const valid = await verifyWebhookSignature(body, signature, secret);
+  const valid = await verifyWebhookSignature(body, signature, secret, timestamp);
   if (!valid) {
     return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 401 });
   }
@@ -107,10 +108,11 @@ async function handlePagesRouter(
     return;
   }
 
-  const signature = (req.headers?.["x-textbubbles-signature"] ?? "") as string;
+  const signature = ((req.headers?.["x-signature"] ?? req.headers?.["x-textbubbles-signature"]) ?? "") as string;
+  const timestamp = (req.headers?.["x-timestamp"] ?? undefined) as string | undefined;
   const body = getRawBody(req);
 
-  const valid = await verifyWebhookSignature(body, signature, secret);
+  const valid = await verifyWebhookSignature(body, signature, secret, timestamp);
   if (!valid) {
     res.status(401).json({ error: "Invalid signature" });
     return;

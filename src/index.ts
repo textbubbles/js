@@ -6,11 +6,16 @@ export {
   ValidationError,
   NotFoundError,
 } from "./errors.js";
+export {
+  isOutgoingMessage,
+  isIncomingMessage,
+} from "./types.js";
 export type {
   TextBubblesConfig,
   MessageEffect,
   ReactionType,
   MessageStatus,
+  MessageChannel,
   PaymentRequestStatus,
   MessageContent,
   SendMessageParams,
@@ -50,3 +55,16 @@ export type {
   FacetimeWebhookEvent,
   WebhookEvent,
 } from "./types.js";
+export {
+  verifyWebhookSignature,
+  parseWebhookEvent,
+  isMessageEvent,
+  isReactionEvent,
+  isTypingEvent,
+  isPaymentEvent,
+  isFacetimeEvent,
+  WebhookHandler,
+  createWebhookHandler,
+} from "./webhooks.js";
+export type { WebhookHandlerOptions } from "./webhooks.js";
+export { TextBubblesEventClient } from "./events.js";

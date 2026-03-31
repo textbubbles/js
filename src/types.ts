@@ -27,9 +27,12 @@ export type MessageStatus =
   | "sent"
   | "delivered"
   | "read"
+  | "received"
   | "failed"
   | "unsent"
   | "scheduled";
+
+export type MessageChannel = "imessage" | "sms" | null;
 
 export type PaymentRequestStatus = "pending" | "paid" | "cancelled" | "expired";
 
@@ -63,6 +66,7 @@ export interface ListMessagesParams {
   status?: MessageStatus;
   limit?: number;
   offset?: number;
+  cursor?: string;
 }
 
 export interface SendCarouselParams {
@@ -88,6 +92,8 @@ export interface Message {
   content: MessageContent;
   effect?: MessageEffect;
   status: MessageStatus;
+  channel: MessageChannel;
+  parentMessageId?: string;
   scheduledAt?: string;
   sentAt?: string;
   deliveredAt?: string;
@@ -102,6 +108,8 @@ export interface MessageList {
   total: number;
   limit: number;
   offset: number;
+  cursor?: string;
+  hasMore?: boolean;
 }
 
 // ── Chats ──
@@ -262,10 +270,12 @@ export type WebhookEventType =
   | "message.received"
   | "message.scheduled"
   | "message.schedule_cancelled"
+  | "message.reaction"
   | "reaction.added"
   | "reaction.removed"
   | "typing.started"
   | "typing.stopped"
+  | "typing.indicator"
   | "payment.request.created"
   | "payment.request.paid"
   | "payment.request.cancelled"
@@ -289,7 +299,8 @@ export interface MessageWebhookEvent extends BaseWebhookEvent {
     | "message.failed"
     | "message.received"
     | "message.scheduled"
-    | "message.schedule_cancelled";
+    | "message.schedule_cancelled"
+    | "message.reaction";
   data: Message;
 }
 
@@ -303,7 +314,7 @@ export interface ReactionWebhookEvent extends BaseWebhookEvent {
 }
 
 export interface TypingWebhookEvent extends BaseWebhookEvent {
-  type: "typing.started" | "typing.stopped";
+  type: "typing.started" | "typing.stopped" | "typing.indicator";
   data: {
     chatGuid: string;
     from: string;
@@ -333,3 +344,13 @@ export type WebhookEvent =
   | TypingWebhookEvent
   | PaymentWebhookEvent
   | FacetimeWebhookEvent;
+
+// ── Message Direction Helpers ──
+
+export function isOutgoingMessage(msg: Message): boolean {
+  return msg.status !== "received";
+}
+
+export function isIncomingMessage(msg: Message): boolean {
+  return msg.status === "received";
+}

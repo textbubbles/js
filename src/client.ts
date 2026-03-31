@@ -173,6 +173,14 @@ class MessagesResource {
   async edit(id: string, params: EditMessageParams): Promise<Message> {
     return this.client.request<Message>("PUT", `/v1/messages/${encodeURIComponent(id)}`, params);
   }
+
+  async unsend(id: string): Promise<void> {
+    return this.client.request<void>("POST", `/v1/messages/${encodeURIComponent(id)}/unsend`);
+  }
+
+  async getStatus(id: string): Promise<{ id: string; status: import("./types.js").MessageStatus }> {
+    return this.client.request<{ id: string; status: import("./types.js").MessageStatus }>("GET", `/v1/messages/${encodeURIComponent(id)}/status`);
+  }
 }
 
 class ChatsResource {

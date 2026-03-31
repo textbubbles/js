@@ -35,6 +35,16 @@
         "types": "./dist/cjs/nextjs.d.ts",
         "default": "./dist/cjs/nextjs.js"
       }
+    },
+    "./events": {
+      "import": {
+        "types": "./dist/esm/events.d.ts",
+        "default": "./dist/esm/events.js"
+      },
+      "require": {
+        "types": "./dist/cjs/events.d.ts",
+        "default": "./dist/cjs/events.js"
+      }
     }
   },
   "bin": {
