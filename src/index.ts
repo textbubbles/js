@@ -68,3 +68,10 @@ export {
 } from "./webhooks.js";
 export type { WebhookHandlerOptions } from "./webhooks.js";
 export { TextBubblesEventClient } from "./events.js";
+export { compressImage, prepareAttachments, fileToBase64 } from "./media.js";
+export type {
+  CompressImageOptions,
+  CompressedImage,
+  PrepareAttachmentsOptions,
+  PreparedAttachment,
+} from "./media.js";
