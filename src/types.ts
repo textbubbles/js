@@ -50,10 +50,35 @@ export interface MessageContent {
   media?: string[];
 }
 
+export interface MessageAttachment {
+  type: "url" | "base64";
+  url?: string;
+  data?: string;
+  mimeType?: string;
+  filename?: string;
+}
+
+export interface MessageMention {
+  address: string;
+  start: number;
+  length: number;
+}
+
+export interface MessageRouting {
+  preference?: ("imessage" | "sms")[];
+  fallback?: boolean;
+}
+
 export interface SendMessageParams {
   to: string;
   content: MessageContent;
+  from?: string;
+  routing?: MessageRouting;
+  replyTo?: string;
+  attachments?: MessageAttachment[];
   effect?: MessageEffect;
+  mentions?: MessageMention[];
+  createContact?: boolean;
   scheduledAt?: string;
   idempotencyKey?: string;
   callbackUrl?: string;
@@ -71,18 +96,21 @@ export interface ListMessagesParams {
 
 export interface SendCarouselParams {
   to: string;
-  images: string[];
+  mediaUrls: string[];
+  text?: string;
+  effect?: MessageEffect;
   idempotencyKey?: string;
   callbackUrl?: string;
   metadata?: Record<string, string>;
 }
 
 export interface ReactToMessageParams {
-  reaction: ReactionType;
+  type: ReactionType;
 }
 
 export interface EditMessageParams {
-  content: MessageContent;
+  text: string;
+  backwardsCompatibilityMessage?: string;
 }
 
 export interface Message {
@@ -132,17 +160,22 @@ export interface RenameChatParams {
   name: string;
 }
 
-export interface ChatParticipantParams {
-  phoneNumber: string;
+export interface AddParticipantParams {
+  participant: string;
+}
+
+export interface TypingIndicatorParams {
+  status: "start" | "stop";
 }
 
 // ── Contacts ──
 
 export interface CreateContactParams {
-  firstName: string;
+  firstName?: string;
   lastName?: string;
   phoneNumber: string;
   email?: string;
+  company?: string;
   tags?: string[];
   metadata?: Record<string, string>;
 }
@@ -152,6 +185,7 @@ export interface UpdateContactParams {
   lastName?: string;
   phoneNumber?: string;
   email?: string;
+  company?: string;
   tags?: string[];
   metadata?: Record<string, string>;
 }
@@ -165,14 +199,26 @@ export interface ListContactsParams {
 
 export interface Contact {
   id: string;
-  firstName: string;
+  firstName?: string;
   lastName?: string;
   phoneNumber: string;
   email?: string;
+  company?: string;
   tags: string[];
   metadata?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FocusStatus {
+  phoneNumber: string;
+  focusActive: boolean;
+  focusMode?: string;
+}
+
+export interface FaceTimeStatus {
+  phoneNumber: string;
+  available: boolean;
 }
 
 export interface ContactList {
@@ -206,7 +252,8 @@ export interface RequestPaymentParams {
   to: string;
   amount: number;
   currency?: string;
-  memo?: string;
+  note?: string;
+  callbackUrl?: string;
 }
 
 export interface PaymentRequest {
@@ -214,10 +261,18 @@ export interface PaymentRequest {
   to: string;
   amount: number;
   currency: string;
-  memo?: string;
+  note?: string;
   status: PaymentRequestStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ListPaymentRequestsParams {
+  status?: PaymentRequestStatus;
+  from?: string;
+  to?: string;
+  limit?: number;
+  cursor?: string;
 }
 
 export interface PaymentRequestList {

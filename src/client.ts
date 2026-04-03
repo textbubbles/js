@@ -17,17 +17,21 @@ import type {
   CreateGroupParams,
   Chat,
   RenameChatParams,
-  ChatParticipantParams,
+  AddParticipantParams,
+  TypingIndicatorParams,
   CreateContactParams,
   UpdateContactParams,
   ListContactsParams,
   Contact,
   ContactList,
+  FocusStatus,
+  FaceTimeStatus,
   BulkCreateContactsParams,
   BulkDeleteContactsParams,
   BulkCreateResult,
   BulkDeleteResult,
   RequestPaymentParams,
+  ListPaymentRequestsParams,
   PaymentRequest,
   PaymentRequestList,
   ProfileState,
@@ -167,7 +171,7 @@ class MessagesResource {
   }
 
   async react(id: string, params: ReactToMessageParams): Promise<void> {
-    return this.client.request<void>("POST", `/v1/messages/${encodeURIComponent(id)}/reaction`, params);
+    return this.client.request<void>("POST", `/v1/messages/${encodeURIComponent(id)}/reactions`, params);
   }
 
   async edit(id: string, params: EditMessageParams): Promise<Message> {
@@ -176,10 +180,6 @@ class MessagesResource {
 
   async unsend(id: string): Promise<void> {
     return this.client.request<void>("POST", `/v1/messages/${encodeURIComponent(id)}/unsend`);
-  }
-
-  async getStatus(id: string): Promise<{ id: string; status: import("./types.js").MessageStatus }> {
-    return this.client.request<{ id: string; status: import("./types.js").MessageStatus }>("GET", `/v1/messages/${encodeURIComponent(id)}/status`);
   }
 }
 
@@ -195,15 +195,15 @@ class ChatsResource {
   }
 
   async rename(guid: string, params: RenameChatParams): Promise<Chat> {
-    return this.client.request<Chat>("PUT", `/v1/chats/${encodeURIComponent(guid)}`, params);
+    return this.client.request<Chat>("PUT", `/v1/chats/${encodeURIComponent(guid)}/name`, params);
   }
 
-  async addParticipant(guid: string, params: ChatParticipantParams): Promise<void> {
+  async addParticipant(guid: string, params: AddParticipantParams): Promise<void> {
     return this.client.request<void>("POST", `/v1/chats/${encodeURIComponent(guid)}/participants`, params);
   }
 
-  async removeParticipant(guid: string, params: ChatParticipantParams): Promise<void> {
-    return this.client.request<void>("DELETE", `/v1/chats/${encodeURIComponent(guid)}/participants`, params);
+  async removeParticipant(guid: string, participantId: string): Promise<void> {
+    return this.client.request<void>("DELETE", `/v1/chats/${encodeURIComponent(guid)}/participants/${encodeURIComponent(participantId)}`);
   }
 
   async leave(guid: string): Promise<void> {
@@ -218,8 +218,8 @@ class ChatsResource {
     return this.client.request<void>("POST", `/v1/chats/${encodeURIComponent(guid)}/unread`);
   }
 
-  async sendTyping(guid: string): Promise<void> {
-    return this.client.request<void>("POST", `/v1/chats/${encodeURIComponent(guid)}/typing`);
+  async sendTyping(guid: string, params: TypingIndicatorParams): Promise<void> {
+    return this.client.request<void>("POST", `/v1/chats/${encodeURIComponent(guid)}/typing`, params);
   }
 }
 
@@ -253,6 +253,14 @@ class ContactsResource {
   async bulkDelete(params: BulkDeleteContactsParams): Promise<BulkDeleteResult> {
     return this.client.request<BulkDeleteResult>("DELETE", "/v1/contacts/bulk", params);
   }
+
+  async getFocusStatus(phoneNumber: string): Promise<FocusStatus> {
+    return this.client.request<FocusStatus>("GET", `/v1/contacts/${encodeURIComponent(phoneNumber)}/focus`);
+  }
+
+  async getFaceTimeStatus(phoneNumber: string): Promise<FaceTimeStatus> {
+    return this.client.request<FaceTimeStatus>("GET", `/v1/contacts/${encodeURIComponent(phoneNumber)}/facetime`);
+  }
 }
 
 class PaymentsResource {
@@ -262,8 +270,8 @@ class PaymentsResource {
     return this.client.request<PaymentRequest>("POST", "/v1/payments/request", params);
   }
 
-  async list(): Promise<PaymentRequestList> {
-    return this.client.request<PaymentRequestList>("GET", "/v1/payments/requests");
+  async list(params?: ListPaymentRequestsParams): Promise<PaymentRequestList> {
+    return this.client.request<PaymentRequestList>("GET", "/v1/payments/requests", undefined, params as Record<string, string | number | undefined>);
   }
 
   async get(id: string): Promise<PaymentRequest> {

@@ -112,7 +112,7 @@ function formatContact(c: Contact): string[] {
 }
 
 function formatPayment(p: PaymentRequest): string[] {
-  return [p.id, p.to, `${p.amount} ${p.currency}`, p.status, p.memo ?? ""];
+  return [p.id, p.to, `${p.amount} ${p.currency}`, p.status, p.note ?? ""];
 }
 
 async function run<T>(label: string, fn: () => Promise<T>): Promise<T> {
@@ -252,7 +252,7 @@ program
   .action(async (to: string, urls: string[]) => {
     const client = getClient();
     const msg = await run("Sending carousel", () =>
-      client.messages.sendCarousel({ to, images: urls }),
+      client.messages.sendCarousel({ to, mediaUrls: urls }),
     );
     if (jsonFlag(program)) return printJson(msg);
     console.log(chalk.green(`Carousel sent: ${msg.id}`));
@@ -488,13 +488,13 @@ program
         to,
         amount: parseFloat(amount),
         currency: opts.currency,
-        memo: opts.memo,
+        note: opts.memo,
       }),
     );
     if (jsonFlag(program)) return printJson(payment);
     console.log(chalk.green(`Payment requested: ${payment.id}`));
     console.log(`Amount: ${payment.amount} ${payment.currency}`);
-    if (payment.memo) console.log(`Memo: ${payment.memo}`);
+    if (payment.note) console.log(`Note: ${payment.note}`);
   });
 
 program
