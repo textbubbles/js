@@ -74,7 +74,7 @@ Or copy `skill/SKILL.md` content into your `.cursorrules` file.
 // Send a message
 await tb.messages.send({
   to: "+14155551234",
-  content: { text: "Hello!", media: ["https://example.com/photo.jpg"] },
+  content: { text: "Hello!", mediaUrls: ["https://example.com/photo.jpg"] },
   effect: "confetti",
   scheduledAt: "2026-03-29T09:00:00Z",
   idempotencyKey: "unique-key",
@@ -234,22 +234,18 @@ await tb.payments.cancel("pay_abc123");
 3. We detect the incoming "sent you $X" message and match it to your request
 4. Status updates to `paid` and `payment.request.paid` webhook fires
 
-## Profile (Name & Photo Sharing)
+## Numbers
+
+List the phone numbers and iMessage emails that are authorized as valid `from` addresses for your account.
 
 ```typescript
-// Get profile state
-const state = await tb.profile.getState();
-
-// Set profile
-await tb.profile.set({
-  name: "John Doe",
-  displayName: "John",
-  photo: "https://example.com/photo.jpg",
-});
-
-// Delete profile
-await tb.profile.delete();
+const numbers = await tb.numbers.list();
+for (const n of numbers) {
+  console.log(n.phoneNumber, n.email, n.isDefault, n.healthStatus);
+}
 ```
+
+Each entry: `{ phoneNumber, email, instanceName, isDefault, healthStatus }` where `healthStatus` is `"healthy" | "degraded" | "unhealthy" | "unknown"`.
 
 ## Capabilities
 
@@ -257,6 +253,54 @@ await tb.profile.delete();
 // Check if a phone number supports iMessage
 const result = await tb.capabilities.check("+14155551234");
 console.log(result.iMessage); // true or false
+```
+
+## Receiving incoming messages
+
+There are two ways to listen for inbound messages (fans replying to you):
+
+1. **Webhooks** — the API POSTs events to a URL you host. Best for production servers that are reachable from the internet. See [Webhooks](#webhooks) below.
+2. **Server-Sent Events (SSE)** — open a long-lived HTTP stream from your process to `GET /v1/events`. Best for local dev, scripts, or clients that can't host a public URL. See [Real-Time Events (SSE)](#real-time-events-sse) below.
+
+Both paths emit the **same event envelope** (`{ id, type, timestamp, data }`) and the **same event types**. The inbound-message event is `message.inbound` — its `data` contains `messageId`, `from`, `to`, `text`, `channel`, and any `attachments`.
+
+Quick webhook example (handles inbound messages):
+
+```typescript
+import { WebhookHandler } from "@textbubbles/js";
+
+const handler = new WebhookHandler({ secret: process.env.WEBHOOK_SECRET! });
+
+handler.on("message.inbound", async (event) => {
+  console.log(`${event.data.from}: ${event.data.text}`);
+});
+
+// In your HTTP route (Express example):
+app.post("/webhooks/textbubbles", async (req, res) => {
+  const result = await handler.handleRequest(
+    JSON.stringify(req.body),
+    req.get("X-Signature")!,
+    req.get("X-Timestamp") ?? undefined,
+  );
+  res.status(result.ok ? 200 : 400).send(result);
+});
+```
+
+Quick SSE example:
+
+```typescript
+import { TextBubblesEventClient } from "@textbubbles/js";
+
+const events = new TextBubblesEventClient({
+  url: "https://api.textbubbles.com/v1/events",
+  headers: { Authorization: `Bearer ${process.env.TEXTBUBBLES_API_KEY}` },
+});
+
+events.on("message.inbound", (event) => {
+  console.log(`${event.data.from}: ${event.data.text}`);
+});
+
+events.connect();
 ```
 
 ## Webhooks

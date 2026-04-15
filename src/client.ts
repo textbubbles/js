@@ -14,6 +14,7 @@ import type {
   EditMessageParams,
   Message,
   MessageList,
+  SendMessageResult,
   CreateGroupParams,
   Chat,
   RenameChatParams,
@@ -34,8 +35,7 @@ import type {
   ListPaymentRequestsParams,
   PaymentRequest,
   PaymentRequestList,
-  ProfileState,
-  SetProfileParams,
+  SenderNumber,
   CapabilityResult,
   WebhookConfig,
   SetWebhookParams,
@@ -51,7 +51,7 @@ export class TextBubblesClient {
   public readonly chats: ChatsResource;
   public readonly contacts: ContactsResource;
   public readonly payments: PaymentsResource;
-  public readonly profile: ProfileResource;
+  public readonly numbers: NumbersResource;
   public readonly capabilities: CapabilitiesResource;
   public readonly webhooks: WebhooksResource;
 
@@ -66,7 +66,7 @@ export class TextBubblesClient {
     this.chats = new ChatsResource(this);
     this.contacts = new ContactsResource(this);
     this.payments = new PaymentsResource(this);
-    this.profile = new ProfileResource(this);
+    this.numbers = new NumbersResource(this);
     this.capabilities = new CapabilitiesResource(this);
     this.webhooks = new WebhooksResource(this);
   }
@@ -101,7 +101,20 @@ export class TextBubblesClient {
       return undefined as T;
     }
 
-    return (await res.json()) as T;
+    const parsed = (await res.json()) as unknown;
+    // The API wraps every success response as `{ success, data, requestId }`.
+    // Unwrap so callers get the shape their types describe. Fall back to the
+    // raw body for any endpoint that doesn't use the envelope.
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "success" in parsed &&
+      "data" in parsed &&
+      (parsed as { success: unknown }).success === true
+    ) {
+      return (parsed as { data: T }).data;
+    }
+    return parsed as T;
   }
 
   private async handleError(res: Response): Promise<never> {
@@ -142,24 +155,32 @@ export class TextBubblesClient {
 class MessagesResource {
   constructor(private client: TextBubblesClient) {}
 
-  async send(params: SendMessageParams): Promise<Message> {
-    return this.client.request<Message>("POST", "/v1/messages", params);
+  async send(params: SendMessageParams): Promise<SendMessageResult> {
+    return this.client.request<SendMessageResult>("POST", "/v1/messages", params);
   }
 
   async list(params?: ListMessagesParams): Promise<MessageList> {
-    return this.client.request<MessageList>("GET", "/v1/messages", undefined, params as Record<string, string | number | undefined>);
+    const raw = await this.client.request<{
+      messages: Message[];
+      pagination: { hasMore: boolean; nextCursor?: string };
+    }>("GET", "/v1/messages", undefined, params as Record<string, string | number | undefined>);
+    return { data: raw.messages, hasMore: raw.pagination.hasMore, nextCursor: raw.pagination.nextCursor };
   }
 
   async get(id: string): Promise<Message> {
     return this.client.request<Message>("GET", `/v1/messages/${encodeURIComponent(id)}`);
   }
 
-  async sendCarousel(params: SendCarouselParams): Promise<Message> {
-    return this.client.request<Message>("POST", "/v1/messages/carousel", params);
+  async sendCarousel(params: SendCarouselParams): Promise<SendMessageResult> {
+    return this.client.request<SendMessageResult>("POST", "/v1/messages/carousel", params);
   }
 
   async listScheduled(): Promise<MessageList> {
-    return this.client.request<MessageList>("GET", "/v1/messages/scheduled");
+    const raw = await this.client.request<{
+      messages: Message[];
+      pagination: { hasMore: boolean; nextCursor?: string };
+    }>("GET", "/v1/messages/scheduled");
+    return { data: raw.messages, hasMore: raw.pagination.hasMore, nextCursor: raw.pagination.nextCursor };
   }
 
   async cancelSchedule(id: string): Promise<void> {
@@ -231,7 +252,13 @@ class ContactsResource {
   }
 
   async list(params?: ListContactsParams): Promise<ContactList> {
-    return this.client.request<ContactList>("GET", "/v1/contacts", undefined, params as Record<string, string | number | undefined>);
+    const raw = await this.client.request<{ contacts: Contact[] }>(
+      "GET",
+      "/v1/contacts",
+      undefined,
+      params as Record<string, string | number | undefined>,
+    );
+    return { data: raw.contacts };
   }
 
   async get(id: string): Promise<Contact> {
@@ -271,7 +298,11 @@ class PaymentsResource {
   }
 
   async list(params?: ListPaymentRequestsParams): Promise<PaymentRequestList> {
-    return this.client.request<PaymentRequestList>("GET", "/v1/payments/requests", undefined, params as Record<string, string | number | undefined>);
+    const raw = await this.client.request<{
+      requests: PaymentRequest[];
+      pagination: { hasMore: boolean; nextCursor?: string };
+    }>("GET", "/v1/payments/requests", undefined, params as Record<string, string | number | undefined>);
+    return { data: raw.requests, hasMore: raw.pagination.hasMore, nextCursor: raw.pagination.nextCursor };
   }
 
   async get(id: string): Promise<PaymentRequest> {
@@ -283,19 +314,11 @@ class PaymentsResource {
   }
 }
 
-class ProfileResource {
+class NumbersResource {
   constructor(private client: TextBubblesClient) {}
 
-  async getState(): Promise<ProfileState> {
-    return this.client.request<ProfileState>("GET", "/v1/profile/state");
-  }
-
-  async set(params: SetProfileParams): Promise<ProfileState> {
-    return this.client.request<ProfileState>("POST", "/v1/profile", params);
-  }
-
-  async delete(): Promise<void> {
-    return this.client.request<void>("DELETE", "/v1/profile");
+  async list(): Promise<SenderNumber[]> {
+    return this.client.request<SenderNumber[]>("GET", "/v1/numbers");
   }
 }
 

@@ -116,7 +116,7 @@ export class WebhookHandler {
     type: K,
     handler: (event: Extract<WebhookEvent, { type: K }>) => void | Promise<void>,
   ): this {
-    this.handlers[type] = handler as (event: never) => void | Promise<void>;
+    this.handlers[type] = handler as WebhookHandlerMap[K];
     return this;
   }
 

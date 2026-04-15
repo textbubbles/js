@@ -236,7 +236,7 @@ program
         to,
         content: {
           text: message,
-          media: opts.media ? [opts.media] : undefined,
+          mediaUrls: opts.media ? [opts.media] : undefined,
         },
         effect: opts.effect as MessageEffect | undefined,
       }),
@@ -297,7 +297,7 @@ messages
       ["ID", "To", "Status", "Text", "Created"],
       result.data.map(formatMessage),
     );
-    console.log(chalk.dim(`\nShowing ${result.data.length} of ${result.total}`));
+    console.log(chalk.dim(`\nShowing ${result.data.length}${result.hasMore ? " (more available — pass --cursor to paginate)" : ""}`));
   });
 
 messages
@@ -312,8 +312,8 @@ messages
     console.log(`${chalk.bold("From:")}        ${msg.from}`);
     console.log(`${chalk.bold("Status:")}      ${msg.status}`);
     console.log(`${chalk.bold("Text:")}        ${msg.content.text ?? "(none)"}`);
-    if (msg.content.media?.length) {
-      console.log(`${chalk.bold("Media:")}       ${msg.content.media.join(", ")}`);
+    if (msg.content.mediaUrls?.length) {
+      console.log(`${chalk.bold("Media:")}       ${msg.content.mediaUrls.join(", ")}`);
     }
     if (msg.effect) console.log(`${chalk.bold("Effect:")}      ${msg.effect}`);
     if (msg.scheduledAt) console.log(`${chalk.bold("Scheduled:")}  ${msg.scheduledAt}`);
@@ -358,7 +358,7 @@ contacts
       ["ID", "Name", "Phone", "Tags"],
       result.data.map(formatContact),
     );
-    console.log(chalk.dim(`\nShowing ${result.data.length} of ${result.total}`));
+    console.log(chalk.dim(`\nShowing ${result.data.length}`));
   });
 
 contacts
